@@ -45,13 +45,21 @@ def run(
     output_folder = DEFAULT_OUTPUT_FOLDER
     colab = DEFAULT_COLAB
 
-    target_points = np.array([[0, 3, 1.0]]) if num_drones == 1 else np.array([[0, 3, 1.0], [3, 0, 1.0]])
+    target_points = (
+        np.array([[0, 3, 1.0]])
+        if num_drones == 1
+        else np.array([[0, 3, 1.0], [3, 0, 1.0]])
+    )
 
     #### Initialize the simulation #############################
-    CUR_POS = np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, -1, 0]])
+    CUR_POS = (
+        np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, -1, 0]])
+    )
 
     INIT_XYZS = CUR_POS.copy()
-    INIT_RPYS = np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, 0, 0]])
+    INIT_RPYS = (
+        np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, 0, 0]])
+    )
     PHY = Physics.PYB
 
     #### Create the environment ################################
@@ -80,25 +88,33 @@ def run(
     wp_counters = np.array([0 for i in range(num_drones)])
 
     #### Initialize the velocity target ########################
+    MAX_SPEED = 0.03 * (5 * env.MAX_SPEED_KMH / 18)  # m/s
+
     TARGET_VEL = np.zeros((num_drones, NUM_WP, 4))
     for j in range(num_drones):
-        direction_2d = np.array([target_points[j][0], target_points[j][1], 0.0])
+        direction_2d = np.array(
+            [
+                target_points[j][0] - INIT_XYZS[j][0],
+                target_points[j][1] - INIT_XYZS[j][1],
+                0.0,
+            ]
+        )
         distance_to_target = np.linalg.norm(direction_2d)
         direction_2d /= distance_to_target
-        ascent_speed = target_points[j][2] / ((NUM_WP / 8) / control_freq_hz)
-        horizontal_speed = distance_to_target / (5 * (NUM_WP / 8) / control_freq_hz)
+        ascent_speed = (target_points[j][2] - INIT_XYZS[j][0]) / (PERIOD / 8)
+        horizontal_speed = distance_to_target / (5 * PERIOD / 8)
 
         for i in range(NUM_WP):
             if i < NUM_WP / 8:
                 # try to reach z-level
-                TARGET_VEL[j, i, :] = [0, 0, 1, ascent_speed]
+                TARGET_VEL[j, i, :] = [0, 0, 1, ascent_speed / MAX_SPEED]
             elif i < (6 * NUM_WP / 8):
                 # 2d motion
                 TARGET_VEL[j, i, :] = [
-                    horizontal_speed * direction_2d[0],
-                    horizontal_speed * direction_2d[1],
+                    direction_2d[0],
+                    direction_2d[1],
                     0,
-                    horizontal_speed,
+                    horizontal_speed / MAX_SPEED,
                 ]
             else:
                 # chill
@@ -148,6 +164,7 @@ def run(
             sync(i, START, env.CTRL_TIMESTEP)
 
     #### Close the environment #################################
+    input("Press enter to close:")
     env.close()
 
     #### Plot the simulation results ###########################
