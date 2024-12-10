@@ -126,6 +126,8 @@ def run(
         colab=colab,
     )
 
+    input("\nPress enter to start:")
+
     #### Run the simulation ####################################
     action = np.zeros((num_drones, 4))
     START = time.time()
@@ -162,7 +164,7 @@ def run(
             sync(i, START, env.CTRL_TIMESTEP)
 
     #### Close the environment #################################
-    input("Press enter to close:")
+    input("\nPress enter to close:")
     env.close()
 
     #### Plot the simulation results ###########################
