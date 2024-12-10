@@ -1,10 +1,12 @@
 """
 Modified from the `pid_velocity.py` example from gym-pybullet-drones
+
+Run as `python -m src.single_drone --num_drones={1 or 2}`
 """
 
 import time
 
-# import argparse
+import argparse
 import numpy as np
 
 from gym_pybullet_drones.utils.enums import DroneModel, Physics
@@ -13,6 +15,7 @@ from gym_pybullet_drones.utils.utils import sync
 
 from gym_pybullet_drones.envs.VelocityAviary import VelocityAviary
 
+DEFAULT_NUM_DRONES = 1
 DEFAULT_DRONE = DroneModel("cf2x")
 DEFAULT_GUI = True
 DEFAULT_RECORD_VIDEO = False
@@ -25,11 +28,10 @@ DEFAULT_DURATION_SEC = 10
 DEFAULT_OUTPUT_FOLDER = "results"
 DEFAULT_COLAB = False
 
-# motion params
-DEFAULT_TARGET_POINTS: np.ndarray = np.array([[0, 3, 1.0]])
 
-
-def run():
+def run(
+    num_drones: int = DEFAULT_NUM_DRONES,
+):
     # use defaults
     drone = DEFAULT_DRONE
     gui = DEFAULT_GUI
@@ -43,19 +45,19 @@ def run():
     output_folder = DEFAULT_OUTPUT_FOLDER
     colab = DEFAULT_COLAB
 
-    target_points = DEFAULT_TARGET_POINTS
+    target_points = np.array([[0, 3, 1.0]]) if num_drones == 1 else np.array([[0, 3, 1.0], [3, 0, 1.0]])
 
     #### Initialize the simulation #############################
-    CUR_POS = np.array([[0, 0, 0]])
+    CUR_POS = np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, -1, 0]])
 
-    INIT_XYZS = np.array([[0, 0, 0]])
-    INIT_RPYS = np.array([[0, 0, 0]])
+    INIT_XYZS = CUR_POS.copy()
+    INIT_RPYS = np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, 0, 0]])
     PHY = Physics.PYB
 
     #### Create the environment ################################
     env = VelocityAviary(
         drone_model=drone,
-        num_drones=1,
+        num_drones=num_drones,
         initial_xyzs=INIT_XYZS,
         initial_rpys=INIT_RPYS,
         physics=Physics.PYB,
@@ -75,64 +77,68 @@ def run():
     #### Compute number of control steps in the simlation ######
     PERIOD = duration_sec
     NUM_WP = control_freq_hz * PERIOD
-    wp_counters = np.array([0 for i in range(4)])
+    wp_counters = np.array([0 for i in range(num_drones)])
 
     #### Initialize the velocity target ########################
-    TARGET_VEL = np.zeros((1, NUM_WP, 4))
-    direction_2d = np.array([target_points[0][0], target_points[0][1], 0.0])
-    distance_to_target = np.linalg.norm(direction_2d)
-    direction_2d /= distance_to_target
-    ascent_speed = target_points[0][2] / ((NUM_WP / 8) / control_freq_hz)
-    horizontal_speed = distance_to_target / (5 * (NUM_WP / 8) / control_freq_hz)
+    TARGET_VEL = np.zeros((num_drones, NUM_WP, 4))
+    for j in range(num_drones):
+        direction_2d = np.array([target_points[j][0], target_points[j][1], 0.0])
+        distance_to_target = np.linalg.norm(direction_2d)
+        direction_2d /= distance_to_target
+        ascent_speed = target_points[j][2] / ((NUM_WP / 8) / control_freq_hz)
+        horizontal_speed = distance_to_target / (5 * (NUM_WP / 8) / control_freq_hz)
 
-    for i in range(NUM_WP):
-        if i < NUM_WP / 8:
-            # try to reach z-level
-            TARGET_VEL[0, i, :] = [0, 0, 1, ascent_speed]
-        elif i < (6 * NUM_WP / 8):
-            # 2d motion
-            TARGET_VEL[0, i, :] = [
-                horizontal_speed * direction_2d[0],
-                horizontal_speed * direction_2d[1],
-                0,
-                horizontal_speed,
-            ]
-        else:
-            # chill
-            TARGET_VEL[0, i, :] = [0, 0, 0, 0.0]
+        for i in range(NUM_WP):
+            if i < NUM_WP / 8:
+                # try to reach z-level
+                TARGET_VEL[j, i, :] = [0, 0, 1, ascent_speed]
+            elif i < (6 * NUM_WP / 8):
+                # 2d motion
+                TARGET_VEL[j, i, :] = [
+                    horizontal_speed * direction_2d[0],
+                    horizontal_speed * direction_2d[1],
+                    0,
+                    horizontal_speed,
+                ]
+            else:
+                # chill
+                TARGET_VEL[j, i, :] = [0, 0, 0, 0.0]
 
     #### Initialize the logger #################################
     logger = Logger(
         logging_freq_hz=control_freq_hz,
-        num_drones=1,
+        num_drones=num_drones,
         output_folder=output_folder,
         colab=colab,
     )
 
     #### Run the simulation ####################################
-    action = np.zeros((1, 4))
+    action = np.zeros((num_drones, 4))
     START = time.time()
     for i in range(0, int(duration_sec * env.CTRL_FREQ)):
 
         ############################################################
-        # for j in range(3): env._showDroneLocalAxes(j)
+        # for j in range(num_drones): env._showDroneLocalAxes(j)
 
         #### Step the simulation ###################################
         obs, reward, terminated, truncated, info = env.step(action)
 
         #### Compute control for the current way point #############
-        action[0, :] = TARGET_VEL[0, wp_counters[0], :]
+        for j in range(num_drones):
+            action[j, :] = TARGET_VEL[j, wp_counters[j], :]
 
         #### Go to the next way point and loop #####################
-        wp_counters[0] = wp_counters[0] + 1 if wp_counters[0] < (NUM_WP - 1) else 0
+        for j in range(num_drones):
+            wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP - 1) else 0
 
         #### Log the simulation ####################################
-        logger.log(
-            drone=0,
-            timestamp=i / env.CTRL_FREQ,
-            state=obs[0],
-            control=np.hstack([TARGET_VEL[0, wp_counters[0], 0:3], np.zeros(9)]),
-        )
+        for j in range(num_drones):
+            logger.log(
+                drone=j,
+                timestamp=i / env.CTRL_FREQ,
+                state=obs[0],
+                control=np.hstack([TARGET_VEL[0, wp_counters[0], 0:3], np.zeros(9)]),
+            )
 
         #### Printout ##############################################
         env.render()
@@ -152,9 +158,16 @@ def run():
 
 if __name__ == "__main__":
     #### Define and parse (optional) arguments for the script ##
-    # parser = argparse.ArgumentParser(
-    #     description="Velocity control example using VelocityAviary"
-    # )
-    # ARGS = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description="Velocity control example using VelocityAviary"
+    )
+    parser.add_argument(
+        "--num_drones",
+        default=DEFAULT_NUM_DRONES,
+        type=int,
+        help="Number of drones (default: 1)",
+        choices=(1, 2),
+        metavar="",
+    )
 
-    run()
+    run(**vars(parser.parse_args()))
