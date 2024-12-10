@@ -1,7 +1,7 @@
 """
 Modified from the `pid_velocity.py` example from gym-pybullet-drones
 
-Run as `python -m src.single_drone --num_drones={1 or 2}`
+Run as `python -m src.simple_path --num_drones={1 or 2}`
 """
 
 import time
