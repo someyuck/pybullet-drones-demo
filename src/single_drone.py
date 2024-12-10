@@ -21,12 +21,12 @@ DEFAULT_USER_DEBUG_GUI = False
 DEFAULT_OBSTACLES = False
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 48
-DEFAULT_DURATION_SEC = 20
+DEFAULT_DURATION_SEC = 10
 DEFAULT_OUTPUT_FOLDER = "results"
 DEFAULT_COLAB = False
 
 # motion params
-DEFAULT_TARGET_POINT: np.ndarray = np.array([0, 3, 1.0])
+DEFAULT_TARGET_POINTS: np.ndarray = np.array([[0, 3, 1.0]])
 
 
 def run():
@@ -43,10 +43,10 @@ def run():
     output_folder = DEFAULT_OUTPUT_FOLDER
     colab = DEFAULT_COLAB
 
-    target_point =DEFAULT_TARGET_POINT
+    target_points = DEFAULT_TARGET_POINTS
 
     #### Initialize the simulation #############################
-    CUR_POS = np.array([0, 0, 0])
+    CUR_POS = np.array([[0, 0, 0]])
 
     INIT_XYZS = np.array([[0, 0, 0]])
     INIT_RPYS = np.array([[0, 0, 0]])
@@ -78,23 +78,28 @@ def run():
     wp_counters = np.array([0 for i in range(4)])
 
     #### Initialize the velocity target ########################
-    TARGET_VEL = np.zeros((NUM_WP, 4))
-    direction_2d = np.array([target_point[0], target_point[1], 0.0])
+    TARGET_VEL = np.zeros((1, NUM_WP, 4))
+    direction_2d = np.array([target_points[0][0], target_points[0][1], 0.0])
     distance_to_target = np.linalg.norm(direction_2d)
     direction_2d /= distance_to_target
-    ascent_speed = target_point[2] / ((NUM_WP / 8) / control_freq_hz)
+    ascent_speed = target_points[0][2] / ((NUM_WP / 8) / control_freq_hz)
     horizontal_speed = distance_to_target / (5 * (NUM_WP / 8) / control_freq_hz)
 
     for i in range(NUM_WP):
         if i < NUM_WP / 8:
             # try to reach z-level
-            TARGET_VEL[i, :] = [0, 0, 1, ascent_speed]
+            TARGET_VEL[0, i, :] = [0, 0, 1, ascent_speed]
         elif i < (6 * NUM_WP / 8):
             # 2d motion
-            TARGET_VEL[i, :] = [horizontal_speed * direction_2d[0], horizontal_speed * direction_2d[1], 0, horizontal_speed]
+            TARGET_VEL[0, i, :] = [
+                horizontal_speed * direction_2d[0],
+                horizontal_speed * direction_2d[1],
+                0,
+                horizontal_speed,
+            ]
         else:
             # chill
-            TARGET_VEL[i, :] = [0, 0, 0, 0.0]
+            TARGET_VEL[0, i, :] = [0, 0, 0, 0.0]
 
     #### Initialize the logger #################################
     logger = Logger(
@@ -116,7 +121,7 @@ def run():
         obs, reward, terminated, truncated, info = env.step(action)
 
         #### Compute control for the current way point #############
-        action[0, :] = TARGET_VEL[wp_counters[0], :]
+        action[0, :] = TARGET_VEL[0, wp_counters[0], :]
 
         #### Go to the next way point and loop #####################
         wp_counters[0] = wp_counters[0] + 1 if wp_counters[0] < (NUM_WP - 1) else 0
@@ -126,7 +131,7 @@ def run():
             drone=0,
             timestamp=i / env.CTRL_FREQ,
             state=obs[0],
-            control=np.hstack([TARGET_VEL[wp_counters[0], 0:3], np.zeros(9)]),
+            control=np.hstack([TARGET_VEL[0, wp_counters[0], 0:3], np.zeros(9)]),
         )
 
         #### Printout ##############################################
