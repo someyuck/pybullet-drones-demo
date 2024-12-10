@@ -170,7 +170,7 @@ def run(
 
                 speed = np.linalg.norm(TARGET_VEL[j, :3])
                 TARGET_VEL[j, :3] /= speed
-                TARGET_VEL[j, 3] = speed / env.SPEED_LIMIT
+                TARGET_VEL[j, 3] = speed # / env.SPEED_LIMIT
 
         #### Compute control for the current way point #############
         action = TARGET_VEL
