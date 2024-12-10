@@ -3,6 +3,7 @@ Modified from the `pid_velocity.py` example from gym-pybullet-drones
 """
 
 import time
+
 # import argparse
 import numpy as np
 
@@ -20,9 +21,12 @@ DEFAULT_USER_DEBUG_GUI = False
 DEFAULT_OBSTACLES = False
 DEFAULT_SIMULATION_FREQ_HZ = 240
 DEFAULT_CONTROL_FREQ_HZ = 48
-DEFAULT_DURATION_SEC = 5
+DEFAULT_DURATION_SEC = 20
 DEFAULT_OUTPUT_FOLDER = "results"
 DEFAULT_COLAB = False
+
+# motion params
+DEFAULT_TARGET_POINT: np.ndarray = np.array([0, 3, 1.0])
 
 
 def run():
@@ -39,17 +43,19 @@ def run():
     output_folder = DEFAULT_OUTPUT_FOLDER
     colab = DEFAULT_COLAB
 
+    target_point =DEFAULT_TARGET_POINT
+
     #### Initialize the simulation #############################
-    INIT_XYZS = np.array([[0, 0, 0.1], [0.3, 0, 0.1], [0.6, 0, 0.1], [0.9, 0, 0.1]])
-    INIT_RPYS = np.array(
-        [[0, 0, 0], [0, 0, np.pi / 3], [0, 0, np.pi / 4], [0, 0, np.pi / 2]]
-    )
+    CUR_POS = np.array([0, 0, 0])
+
+    INIT_XYZS = np.array([[0, 0, 0]])
+    INIT_RPYS = np.array([[0, 0, 0]])
     PHY = Physics.PYB
 
     #### Create the environment ################################
     env = VelocityAviary(
         drone_model=drone,
-        num_drones=4,
+        num_drones=1,
         initial_xyzs=INIT_XYZS,
         initial_rpys=INIT_RPYS,
         physics=Physics.PYB,
@@ -72,35 +78,34 @@ def run():
     wp_counters = np.array([0 for i in range(4)])
 
     #### Initialize the velocity target ########################
-    TARGET_VEL = np.zeros((4, NUM_WP, 4))
+    TARGET_VEL = np.zeros((NUM_WP, 4))
+    direction_2d = np.array([target_point[0], target_point[1], 0.0])
+    distance_to_target = np.linalg.norm(direction_2d)
+    direction_2d /= distance_to_target
+    ascent_speed = target_point[2] / ((NUM_WP / 8) / control_freq_hz)
+    horizontal_speed = distance_to_target / (5 * (NUM_WP / 8) / control_freq_hz)
+
     for i in range(NUM_WP):
-        TARGET_VEL[0, i, :] = (
-            [-0.5, 1, 0, 0.99] if i < (NUM_WP / 8) else [0.5, -1, 0, 0.99]
-        )
-        TARGET_VEL[1, i, :] = (
-            [0, 1, 0, 0.99] if i < (NUM_WP / 8 + NUM_WP / 6) else [0, -1, 0, 0.99]
-        )
-        TARGET_VEL[2, i, :] = (
-            [0.2, 1, 0.2, 0.99]
-            if i < (NUM_WP / 8 + 2 * NUM_WP / 6)
-            else [-0.2, -1, -0.2, 0.99]
-        )
-        TARGET_VEL[3, i, :] = (
-            [0, 1, 0.5, 0.99]
-            if i < (NUM_WP / 8 + 3 * NUM_WP / 6)
-            else [0, -1, -0.5, 0.99]
-        )
+        if i < NUM_WP / 8:
+            # try to reach z-level
+            TARGET_VEL[i, :] = [0, 0, 1, ascent_speed]
+        elif i < (6 * NUM_WP / 8):
+            # 2d motion
+            TARGET_VEL[i, :] = [horizontal_speed * direction_2d[0], horizontal_speed * direction_2d[1], 0, horizontal_speed]
+        else:
+            # chill
+            TARGET_VEL[i, :] = [0, 0, 0, 0.0]
 
     #### Initialize the logger #################################
     logger = Logger(
         logging_freq_hz=control_freq_hz,
-        num_drones=4,
+        num_drones=1,
         output_folder=output_folder,
         colab=colab,
     )
 
     #### Run the simulation ####################################
-    action = np.zeros((4, 4))
+    action = np.zeros((1, 4))
     START = time.time()
     for i in range(0, int(duration_sec * env.CTRL_FREQ)):
 
@@ -111,21 +116,18 @@ def run():
         obs, reward, terminated, truncated, info = env.step(action)
 
         #### Compute control for the current way point #############
-        for j in range(4):
-            action[j, :] = TARGET_VEL[j, wp_counters[j], :]
+        action[0, :] = TARGET_VEL[wp_counters[0], :]
 
         #### Go to the next way point and loop #####################
-        for j in range(4):
-            wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP - 1) else 0
+        wp_counters[0] = wp_counters[0] + 1 if wp_counters[0] < (NUM_WP - 1) else 0
 
         #### Log the simulation ####################################
-        for j in range(4):
-            logger.log(
-                drone=j,
-                timestamp=i / env.CTRL_FREQ,
-                state=obs[j],
-                control=np.hstack([TARGET_VEL[j, wp_counters[j], 0:3], np.zeros(9)]),
-            )
+        logger.log(
+            drone=0,
+            timestamp=i / env.CTRL_FREQ,
+            state=obs[0],
+            control=np.hstack([TARGET_VEL[wp_counters[0], 0:3], np.zeros(9)]),
+        )
 
         #### Printout ##############################################
         env.render()
