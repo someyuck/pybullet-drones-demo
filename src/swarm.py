@@ -27,6 +27,7 @@ DEFAULT_CONTROL_FREQ_HZ = 48
 DEFAULT_DURATION_SEC = 60
 DEFAULT_OUTPUT_FOLDER = "results"
 DEFAULT_COLAB = False
+DEFAULT_INIT_POS = 0
 
 # protocol constants
 COLLISION_THRESHOLD = 0.4
@@ -36,8 +37,32 @@ COLLISION_AVOIDANCE_GAIN = 2.0
 GAMMA = 0.5
 
 
+def get_circle_points(num_points: int, radius: float, height: float) -> np.ndarray:
+    points = np.zeros((num_points, 3))
+    for i in range(num_points):
+        angle = i * (2 * np.pi / num_points)
+        x = radius * np.cos(angle)
+        y = radius * np.sin(angle)
+        points[i, :] = [x, y, height]
+
+    return points
+
+
+def get_bounded_random_points(num_points: int, max_radius: float, max_height: float):
+    angles = np.random.uniform(0, 2 * np.pi, size=num_points)
+    distances = np.random.uniform(0, max_radius, size=num_points)
+    heights = np.random.uniform(0, max_height, size=num_points)
+
+    x = distances * np.cos(angles)
+    y = distances * np.sin(angles)
+
+    points = np.column_stack((x, y, heights))
+    return points
+
+
 def run(
     num_drones: int = DEFAULT_NUM_DRONES,
+    init_pos: int = DEFAULT_INIT_POS,
 ):
     # use defaults
     drone = DEFAULT_DRONE
@@ -53,9 +78,18 @@ def run(
     colab = DEFAULT_COLAB
 
     #### Initialize the simulation #############################
-    CUR_POS = np.zeros((num_drones, 3))
-    for j in range(num_drones):
-        CUR_POS[j, :] = [0.5 * j, 0, 3.0]
+    match init_pos:
+        case 0:
+            CUR_POS = np.zeros((num_drones, 3))
+            for j in range(num_drones):
+                CUR_POS[j, :] = [0.5 * j, 0, 3.0]
+        case 1:
+            CUR_POS = get_circle_points(num_drones, 3.0, 3.0)
+        case 2:
+            CUR_POS = get_bounded_random_points(num_drones, 3.0, 3.0)
+        case _:
+            raise ValueError(f"Invalid initial position type {init_pos}")
+
     CUR_VELS = np.zeros((num_drones, 4))
     INIT_XYZS = CUR_POS.copy()
     INIT_RPYS = np.zeros((num_drones, 3))
@@ -175,6 +209,14 @@ if __name__ == "__main__":
         default=DEFAULT_NUM_DRONES,
         type=int,
         help="Number of drones (default: 4)",
+        metavar="",
+    )
+    parser.add_argument(
+        "--init_pos",
+        default=DEFAULT_INIT_POS,
+        type=int,
+        help="Type of initial position (on a line: 0, on a circle: 1, random: 2)",
+        choices=(0, 1, 2),
         metavar="",
     )
 
