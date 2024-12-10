@@ -6,7 +6,7 @@ A demonstration of multidrone control using PyBullet and the gym-pybullet-drones
 `gym-pybullet-drones` is used as the simulation environment, as it provides easy-to-use control of
 multiple drones in an agent-environment setting.
 
-Install it by following the steps in the [official repository](https://github.com/utiasDSL/gym-pybullet-drones).
+Install it by following the steps in the [official repository](https://github.com/utiasDSL/gym-pybullet-drones/tree/main).
 **Note:** Use the `main` branch, and not the `master` branch.
 
 ## Running the simulation
