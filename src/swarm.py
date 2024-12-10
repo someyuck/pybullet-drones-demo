@@ -116,7 +116,6 @@ def run(
     DRONE_IDS = env.getDroneIds()
 
     #### Velocity target is calculated in real time acc to protocol ########################
-    MAX_SPEED = 0.03 * (5 * env.MAX_SPEED_KMH / 18)  # m/s
     TARGET_VEL = np.zeros((num_drones, 4))
 
     #### Initialize the logger #################################
@@ -168,7 +167,10 @@ def run(
                             + GAMMA * (CUR_VELS[n] - CUR_VELS[j])
                         )
                     )
-                TARGET_VEL[j, 3] = np.linalg.norm(TARGET_VEL[j, :3]) / MAX_SPEED
+
+                speed = np.linalg.norm(TARGET_VEL[j, :3])
+                TARGET_VEL[j, :3] /= speed
+                TARGET_VEL[j, 3] = speed / env.SPEED_LIMIT
 
         #### Compute control for the current way point #############
         action = TARGET_VEL

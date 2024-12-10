@@ -88,8 +88,6 @@ def run(
     wp_counters = np.array([0 for i in range(num_drones)])
 
     #### Initialize the velocity target ########################
-    MAX_SPEED = 0.03 * (5 * env.MAX_SPEED_KMH / 18)  # m/s
-
     TARGET_VEL = np.zeros((num_drones, NUM_WP, 4))
     for j in range(num_drones):
         direction_2d = np.array(
@@ -107,14 +105,14 @@ def run(
         for i in range(NUM_WP):
             if i < NUM_WP / 8:
                 # try to reach z-level
-                TARGET_VEL[j, i, :] = [0, 0, 1, ascent_speed / MAX_SPEED]
+                TARGET_VEL[j, i, :] = [0, 0, 1, ascent_speed / env.SPEED_LIMIT]
             elif i < (6 * NUM_WP / 8):
                 # 2d motion
                 TARGET_VEL[j, i, :] = [
                     direction_2d[0],
                     direction_2d[1],
                     0,
-                    horizontal_speed / MAX_SPEED,
+                    horizontal_speed / env.SPEED_LIMIT,
                 ]
             else:
                 # chill
