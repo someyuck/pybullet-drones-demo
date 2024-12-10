@@ -152,8 +152,8 @@ def run(
             logger.log(
                 drone=j,
                 timestamp=i / env.CTRL_FREQ,
-                state=obs[0],
-                control=np.hstack([TARGET_VEL[0, wp_counters[0], 0:3], np.zeros(9)]),
+                state=obs[j],
+                control=np.hstack([TARGET_VEL[0, wp_counters[j], 0:3], np.zeros(9)]),
             )
 
         #### Printout ##############################################
