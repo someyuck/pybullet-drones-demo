@@ -31,10 +31,11 @@ DEFAULT_COLAB = False
 
 def run(
     num_drones: int = DEFAULT_NUM_DRONES,
+    gui: int = int(DEFAULT_GUI),
 ):
     # use defaults
     drone = DEFAULT_DRONE
-    gui = DEFAULT_GUI
+    gui = bool(gui)
     record_video = DEFAULT_RECORD_VIDEO
     user_debug_gui = DEFAULT_USER_DEBUG_GUI
     obstacles = DEFAULT_OBSTACLES
@@ -173,6 +174,14 @@ if __name__ == "__main__":
         type=int,
         help="Number of drones (default: 1)",
         choices=(1, 2),
+        metavar="",
+    )
+    parser.add_argument(
+        "--gui",
+        default=int(DEFAULT_GUI),
+        type=int,
+        help="Whether to connect in GUI mode or not",
+        choices=(0, 1),
         metavar="",
     )
 
