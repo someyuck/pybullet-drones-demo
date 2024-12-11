@@ -31,6 +31,7 @@ python -m src.simple_path --num_drones=2
 - Starting with all drones in a square shape: `python -m src.swarm --init_pos=1`
 - Starting with all drones in random positions: `python -m src.swarm --init_pos=2`
 
+The number of drones can be changed by passing a value to the `--num_drones` flag.
 
 ## Cleanup
 
