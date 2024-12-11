@@ -32,6 +32,7 @@ DEFAULT_COLAB = False
 def run(
     num_drones: int = DEFAULT_NUM_DRONES,
     gui: int = int(DEFAULT_GUI),
+    colab: int = int(DEFAULT_COLAB),
 ):
     # use defaults
     drone = DEFAULT_DRONE
@@ -43,7 +44,7 @@ def run(
     control_freq_hz = DEFAULT_CONTROL_FREQ_HZ
     duration_sec = DEFAULT_DURATION_SEC
     output_folder = DEFAULT_OUTPUT_FOLDER
-    colab = DEFAULT_COLAB
+    colab = bool(colab)
 
     target_points = (
         np.array([[0, 3, 1.0]])
@@ -181,6 +182,14 @@ if __name__ == "__main__":
         default=int(DEFAULT_GUI),
         type=int,
         help="Whether to connect in GUI mode or not",
+        choices=(0, 1),
+        metavar="",
+    )
+    parser.add_argument(
+        "--colab",
+        default=int(DEFAULT_COLAB),
+        type=int,
+        help="Whether running in a colab nb",
         choices=(0, 1),
         metavar="",
     )
