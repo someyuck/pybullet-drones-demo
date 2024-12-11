@@ -68,7 +68,6 @@ def run(
     drone = DEFAULT_DRONE
     gui = DEFAULT_GUI
     record_video = DEFAULT_RECORD_VIDEO
-    plot = DEFAULT_PLOT
     user_debug_gui = DEFAULT_USER_DEBUG_GUI
     obstacles = DEFAULT_OBSTACLES
     simulation_freq_hz = DEFAULT_SIMULATION_FREQ_HZ
@@ -93,7 +92,6 @@ def run(
     CUR_VELS = np.zeros((num_drones, 4))
     INIT_XYZS = CUR_POS.copy()
     INIT_RPYS = np.zeros((num_drones, 3))
-    PHY = Physics.PYB
 
     #### Create the environment ################################
     env = VelocityAviary(
@@ -110,10 +108,6 @@ def run(
         obstacles=obstacles,
         user_debug_gui=user_debug_gui,
     )
-
-    #### Obtain the PyBullet Client ID from the environment ####
-    PYB_CLIENT = env.getPyBulletClient()
-    DRONE_IDS = env.getDroneIds()
 
     #### Velocity target is calculated in real time acc to protocol ########################
     TARGET_VEL = np.zeros((num_drones, 4))
@@ -170,7 +164,7 @@ def run(
 
                 speed = np.linalg.norm(TARGET_VEL[j, :3])
                 TARGET_VEL[j, :3] /= speed
-                TARGET_VEL[j, 3] = speed # / env.SPEED_LIMIT
+                TARGET_VEL[j, 3] = speed  # / env.SPEED_LIMIT
 
         #### Compute control for the current way point #############
         action = TARGET_VEL
@@ -194,11 +188,6 @@ def run(
     #### Close the environment #################################
     input("\nPress enter to close:")
     env.close()
-
-    #### Plot the simulation results ###########################
-    logger.save_as_csv("vel")  # Optional CSV save
-    if plot:
-        logger.plot()
 
 
 if __name__ == "__main__":

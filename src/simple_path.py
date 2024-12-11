@@ -36,7 +36,6 @@ def run(
     drone = DEFAULT_DRONE
     gui = DEFAULT_GUI
     record_video = DEFAULT_RECORD_VIDEO
-    plot = DEFAULT_PLOT
     user_debug_gui = DEFAULT_USER_DEBUG_GUI
     obstacles = DEFAULT_OBSTACLES
     simulation_freq_hz = DEFAULT_SIMULATION_FREQ_HZ
@@ -60,7 +59,6 @@ def run(
     INIT_RPYS = (
         np.array([[0, 0, 0]]) if num_drones == 1 else np.array([[0, 0, 0], [0, 0, 0]])
     )
-    PHY = Physics.PYB
 
     #### Create the environment ################################
     env = VelocityAviary(
@@ -77,10 +75,6 @@ def run(
         obstacles=obstacles,
         user_debug_gui=user_debug_gui,
     )
-
-    #### Obtain the PyBullet Client ID from the environment ####
-    PYB_CLIENT = env.getPyBulletClient()
-    DRONE_IDS = env.getDroneIds()
 
     #### Compute number of control steps in the simlation ######
     PERIOD = duration_sec
@@ -166,11 +160,6 @@ def run(
     #### Close the environment #################################
     input("\nPress enter to close:")
     env.close()
-
-    #### Plot the simulation results ###########################
-    logger.save_as_csv("vel")  # Optional CSV save
-    if plot:
-        logger.plot()
 
 
 if __name__ == "__main__":
